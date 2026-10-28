@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gabriel Volantes — repasses</title>
+<style>
+body{font:17px system-ui;max-width:850px;margin:35px auto;padding:0 20px;background:#f4f5f5;color:#172c28}
+input,button{font:inherit;padding:12px;margin:5px 0}button{background:#17634f;color:white;border:0;border-radius:6px;cursor:pointer}
+article{background:white;padding:20px;border-radius:12px;margin:20px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
+label{display:block}input{max-width:90%}#status{min-height:25px}
+</style>
+<h1>Atendimentos para o Gabriel</h1>
+<p>O assistente está pausado nas conversas abaixo. Esta tela permite consultar o repasse; não envia mensagens nem confirma agendamentos.</p>
+<form id="login"><label>Chave administrativa <input id="key" type="password" required autocomplete="off"></label><button>Acessar</button></form>
+<button id="refresh" hidden>Atualizar</button> <button id="logout" hidden>Sair</button>
+<p id="status" role="status"></p><main id="list"></main>
+<script>
+let token='';
+const get=id=>document.getElementById(id);
+async function refresh(){
+  get('status').textContent='Consultando…';
+  try {
+    const response=await fetch('/handoffs',{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    if(!response.ok) throw new Error('Não foi possível acessar. Confira a chave e a conexão.');
+    const data=await response.json();get('list').replaceChildren();
+    for(const item of data.handoffs){
+      const card=document.createElement('article'), title=document.createElement('h2'), body=document.createElement('pre');
+      title.textContent='Cliente: +'+item.phone;
+      body.textContent=JSON.stringify(item.state,null,2)+'\n\n'+item.history.map(m=>(m.role==='customer'?'Cliente: ':'Assistente: ')+m.text).join('\n\n');
+      card.append(title,body);get('list').append(card);
+    }
+    get('status').textContent=data.handoffs.length+' atendimento(s) aguardando você. Atualize esta tela para consultar novos repasses.';
+    get('login').hidden=true;get('refresh').hidden=false;get('logout').hidden=false;
+  }catch(e){get('status').textContent=e.message;}
+}
+get('login').onsubmit=e=>{e.preventDefault();token=get('key').value;get('key').value='';refresh();};
+get('refresh').onclick=refresh;get('logout').onclick=()=>location.reload();
+</script>
+</html>
